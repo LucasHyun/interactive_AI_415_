@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time AI Art Modification</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Real-Time AI Art Modification</h1>
+
+    <!-- Generate Image Section -->
+    <h2>Generate Image</h2>
+    <button id="start-recording">🎤 Start Recording</button>
+    <button id="stop-recording" disabled>⏹ Stop Recording</button>
+    <p id="status">Status: Idle</p>
+    <img id="generated-image" src="./static/generated_image.png" alt="Generated Image" />
+
+    <!-- Modify Image Section -->
+    <h2>Modify Image</h2>
+    <button id="modify-recording">🎤 Give Modification Instructions</button>
+    <p id="modify-status">Modification Status: Idle</p>
+    <img id="modified-image" src="" alt="Modified Image" />
+
+    <script>
+        const startRecording = document.getElementById('start-recording');
+        const stopRecording = document.getElementById('stop-recording');
+        const modifyRecording = document.getElementById('modify-recording');
+        const status = document.getElementById('status');
+        const modifyStatus = document.getElementById('modify-status');
+        let mediaRecorder;
+        let audioChunks = [];
+
+        function sendAudio(audioBlob, url, imageId, statusElement) {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            fetch(url, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById(imageId).src = data.image_path;
+                    statusElement.textContent = "Status: Done";
+                })
+                .catch(() => {
+                    statusElement.textContent = "Status: Failed";
+                });
+        }
+
+        // Start recording for generating an image
+        startRecording.onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+            status.textContent = "Status: Recording...";
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+
+            startRecording.disabled = true;
+            stopRecording.disabled = false;
+        };
+
+        // Stop recording and send audio for generating an image
+        stopRecording.onclick = () => {
+            mediaRecorder.stop();
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                sendAudio(audioBlob, '/process-audio', 'generated-image', status);
+            };
+
+            startRecording.disabled = false;
+            stopRecording.disabled = true;
+        };
+
+        // Start recording for modifying an image
+        modifyRecording.onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+            modifyStatus.textContent = "Modification Status: Recording...";
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                sendAudio(audioBlob, '/process-audio', 'modified-image', modifyStatus);
+            };
+
+            // Automatically stop recording after 5 seconds
+            setTimeout(() => {
+                mediaRecorder.stop();
+            }, 5000);
+        };
+    </script>
+</body>
+</html>

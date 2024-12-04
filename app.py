@@ -21,14 +21,15 @@ GENERATE_IMAGE_URL = "https://api.stability.ai/v2beta/stable-image/generate/core
 REMOVE_BACKGROUND_URL = "https://api.stability.ai/v2beta/stable-image/edit/remove-background"
 SEARCH_AND_RECOLOR_URL = "https://api.stability.ai/v2beta/stable-image/edit/search-and-recolor"
 SEARCH_AND_REPLACE_URL = "https://api.stability.ai/v2beta/stable-image/edit/search-and-replace"
+OUTPAINT_URL = "https://api.stability.ai/v2beta/stable-image/edit/outpaint"
 
 # Global variable to store the last generated image path
 last_generated_image = None
 
 
-def generate_unique_file_path(task_name):
+def generate_unique_file_path(task_name, extension="png"):
     """Generate a unique file path for a task."""
-    return os.path.join(app.config['IMAGE_FOLDER'], f"{task_name}_{uuid.uuid4().hex}.png")
+    return os.path.join(app.config['IMAGE_FOLDER'], f"{task_name}_{uuid.uuid4().hex}.{extension}")
 
 
 def generate_image(prompt):
@@ -122,6 +123,31 @@ def search_and_replace(input_image_path, search_prompt, new_prompt):
         raise Exception(f"Error: {response.json()}")
 
 
+def outpaint_image(input_image_path, left, down):
+    """Perform outpainting on the image."""
+    headers = {
+        "authorization": f"Bearer {STABLE_DIFFUSION_API_KEY}",
+        "accept": "image/*"
+    }
+    files = {
+        "image": open(input_image_path, "rb")
+    }
+    data = {
+        "left": left,
+        "down": down,
+        "output_format": "webp",
+    }
+    response = requests.post(OUTPAINT_URL, headers=headers, files=files, data=data)
+
+    if response.status_code == 200:
+        outpainted_image_path = generate_unique_file_path("outpainted", "webp")
+        with open(outpainted_image_path, 'wb') as file:
+            file.write(response.content)
+        return outpainted_image_path
+    else:
+        raise Exception(f"Error: {response.json()}")
+
+
 @app.route('/')
 def index():
     """Render the main application interface."""
@@ -154,6 +180,8 @@ def modify_image():
     prompt = data.get('prompt', '')
     search_prompt = data.get('search_prompt', '')
     new_prompt = data.get('new_prompt', '')
+    left = data.get('left', 0)
+    down = data.get('down', 0)
 
     if not last_generated_image:
         return jsonify({'error': "No image generated yet."}), 400
@@ -165,6 +193,8 @@ def modify_image():
             last_generated_image = search_and_recolor(last_generated_image, prompt)
         elif task == "search_and_replace":
             last_generated_image = search_and_replace(last_generated_image, search_prompt, new_prompt)
+        elif task == "outpaint":
+            last_generated_image = outpaint_image(last_generated_image, left, down)
         else:
             return jsonify({'error': f"Unknown task: {task}"}), 400
         return jsonify({'image_path': last_generated_image})

@@ -64,9 +64,13 @@
             const prompt = document.getElementById('modification-prompt').value || '';
             const searchPrompt = document.getElementById('search-prompt').value || '';
             const newPrompt = document.getElementById('new-prompt').value || '';
+            const left = document.getElementById('outpaint-left').value || 0;
+            const down = document.getElementById('outpaint-down').value || 0;
 
             const body = task === 'search_and_replace'
                 ? { task, search_prompt: searchPrompt, new_prompt: newPrompt }
+                : task === 'outpaint'
+                ? { task, left: parseInt(left), down: parseInt(down) }
                 : { task, prompt };
 
             const response = await fetch('/modify-image', {
@@ -90,9 +94,10 @@
     <p>Audio Instruction: <span id="audio-instruction"></span></p>
     <button onclick="submitInstruction()">Generate Image</button>
     <br><br>
-    <h2>Modify Image</h2>
+    <h2>Generated Image</h2>
     <img id="generated-image" src="" alt="Generated Image" style="max-width: 100%; height: auto;">
     <br><br>
+    <h2>Modify Image</h2>
     <input type="text" id="modification-prompt" placeholder="Recolor prompt (e.g., blue shades)">
     <button onclick="modifyImage('recolor')">Recolor</button>
     <button onclick="modifyImage('remove_background')">Remove Background</button>
@@ -101,5 +106,12 @@
     <input type="text" id="search-prompt" placeholder="Search prompt (e.g., dog)">
     <input type="text" id="new-prompt" placeholder="Replace with (e.g., cat)">
     <button onclick="modifyImage('search_and_replace')">Search and Replace</button>
+    <br><br>
+    <h3>Outpainting</h3>
+    <label for="outpaint-left">Expand Left:</label>
+    <input type="number" id="outpaint-left" placeholder="Pixels (e.g., 200)">
+    <label for="outpaint-down">Expand Down:</label>
+    <input type="number" id="outpaint-down" placeholder="Pixels (e.g., 200)">
+    <button onclick="modifyImage('outpaint')">Outpaint</button>
 </body>
 </html>

@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 import requests
 import os
+import uuid
 
 # Load environment variables
 load_dotenv()
@@ -22,7 +23,12 @@ SEARCH_AND_RECOLOR_URL = "https://api.stability.ai/v2beta/stable-image/edit/sear
 SEARCH_AND_REPLACE_URL = "https://api.stability.ai/v2beta/stable-image/edit/search-and-replace"
 
 # Global variable to store the last generated image path
-last_generated_image = os.path.join(app.config['IMAGE_FOLDER'], "generated_image.png")
+last_generated_image = None
+
+
+def generate_unique_file_path(task_name):
+    """Generate a unique file path for a task."""
+    return os.path.join(app.config['IMAGE_FOLDER'], f"{task_name}_{uuid.uuid4().hex}.png")
 
 
 def generate_image(prompt):
@@ -38,9 +44,10 @@ def generate_image(prompt):
     response = requests.post(GENERATE_IMAGE_URL, headers=headers, files={"none": ''}, data=data)
 
     if response.status_code == 200:
-        with open(last_generated_image, 'wb') as file:
+        generated_image_path = generate_unique_file_path("generated")
+        with open(generated_image_path, 'wb') as file:
             file.write(response.content)
-        return last_generated_image
+        return generated_image_path
     else:
         raise Exception(f"Error: {response.json()}")
 
@@ -57,7 +64,7 @@ def remove_background(input_image_path):
     response = requests.post(REMOVE_BACKGROUND_URL, headers=headers, files=files)
 
     if response.status_code == 200:
-        modified_image_path = os.path.join(app.config['IMAGE_FOLDER'], "background_removed.png")
+        modified_image_path = generate_unique_file_path("background_removed")
         with open(modified_image_path, 'wb') as file:
             file.write(response.content)
         return modified_image_path
@@ -82,7 +89,7 @@ def search_and_recolor(input_image_path, prompt):
     response = requests.post(SEARCH_AND_RECOLOR_URL, headers=headers, files=files, data=data)
 
     if response.status_code == 200:
-        modified_image_path = os.path.join(app.config['IMAGE_FOLDER'], "recolored_image.png")
+        modified_image_path = generate_unique_file_path("recolored")
         with open(modified_image_path, 'wb') as file:
             file.write(response.content)
         return modified_image_path
@@ -107,7 +114,7 @@ def search_and_replace(input_image_path, search_prompt, new_prompt):
     response = requests.post(SEARCH_AND_REPLACE_URL, headers=headers, files=files, data=data)
 
     if response.status_code == 200:
-        modified_image_path = os.path.join(app.config['IMAGE_FOLDER'], "search_replaced_image.png")
+        modified_image_path = generate_unique_file_path("search_replaced")
         with open(modified_image_path, 'wb') as file:
             file.write(response.content)
         return modified_image_path
@@ -132,8 +139,8 @@ def generate_image_from_text():
         return jsonify({'error': "Prompt is required."}), 400
 
     try:
-        generated_image_path = generate_image(prompt)
-        return jsonify({'image_path': generated_image_path})
+        last_generated_image = generate_image(prompt)
+        return jsonify({'image_path': last_generated_image})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -148,16 +155,19 @@ def modify_image():
     search_prompt = data.get('search_prompt', '')
     new_prompt = data.get('new_prompt', '')
 
+    if not last_generated_image:
+        return jsonify({'error': "No image generated yet."}), 400
+
     try:
         if task == "remove_background":
-            modified_image = remove_background(last_generated_image)
+            last_generated_image = remove_background(last_generated_image)
         elif task == "recolor":
-            modified_image = search_and_recolor(last_generated_image, prompt)
+            last_generated_image = search_and_recolor(last_generated_image, prompt)
         elif task == "search_and_replace":
-            modified_image = search_and_replace(last_generated_image, search_prompt, new_prompt)
+            last_generated_image = search_and_replace(last_generated_image, search_prompt, new_prompt)
         else:
             return jsonify({'error': f"Unknown task: {task}"}), 400
-        return jsonify({'image_path': modified_image})
+        return jsonify({'image_path': last_generated_image})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

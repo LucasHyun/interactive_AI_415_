@@ -3,94 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time AI Art Modification</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <h1>Real-Time AI Art Modification</h1>
-
-    <!-- Generate Image Section -->
-    <h2>Generate Image</h2>
-    <button id="start-recording">🎤 Start Recording</button>
-    <button id="stop-recording" disabled>⏹ Stop Recording</button>
-    <p id="status">Status: Idle</p>
-    <img id="generated-image" src="./static/generated_image.png" alt="Generated Image" />
-
-    <!-- Modify Image Section -->
-    <h2>Modify Image</h2>
-    <button id="modify-recording">🎤 Give Modification Instructions</button>
-    <p id="modify-status">Modification Status: Idle</p>
-    <img id="modified-image" src="" alt="Modified Image" />
-
+    <title>Interactive AI Art Show</title>
     <script>
-        const startRecording = document.getElementById('start-recording');
-        const stopRecording = document.getElementById('stop-recording');
-        const modifyRecording = document.getElementById('modify-recording');
-        const status = document.getElementById('status');
-        const modifyStatus = document.getElementById('modify-status');
-        let mediaRecorder;
-        let audioChunks = [];
+        let recognition;
+        let isRecording = false;
 
-        function sendAudio(audioBlob, url, imageId, statusElement) {
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'recording.webm');
-            fetch(url, { method: 'POST', body: formData })
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById(imageId).src = data.image_path;
-                    statusElement.textContent = "Status: Done";
-                })
-                .catch(() => {
-                    statusElement.textContent = "Status: Failed";
-                });
+        // Initialize Speech Recognition
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+                document.getElementById('audio-instruction').innerText = transcript;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+            };
+
+            recognition.onend = () => {
+                if (isRecording) {
+                    recognition.start(); // Restart if stopped accidentally
+                }
+            };
+        } else {
+            alert('Speech Recognition API is not supported in this browser.');
         }
 
-        // Start recording for generating an image
-        startRecording.onclick = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.start();
-            status.textContent = "Status: Recording...";
-            audioChunks = [];
+        function startStopRecording() {
+            if (isRecording) {
+                recognition.stop();
+                isRecording = false;
+                document.getElementById('record-button').innerText = 'Start Recording';
+            } else {
+                recognition.start();
+                isRecording = true;
+                document.getElementById('record-button').innerText = 'Stop Recording';
+            }
+        }
 
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+        function submitInstruction() {
+            const prompt = document.getElementById('audio-instruction').innerText;
 
-            startRecording.disabled = true;
-            stopRecording.disabled = false;
-        };
+            fetch('/generate-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.image_path) {
+                    document.getElementById('generated-image').src = data.image_path;
+                } else {
+                    alert(data.error || "An error occurred.");
+                }
+            });
+        }
 
-        // Stop recording and send audio for generating an image
-        stopRecording.onclick = () => {
-            mediaRecorder.stop();
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                sendAudio(audioBlob, '/process-audio', 'generated-image', status);
-            };
-
-            startRecording.disabled = false;
-            stopRecording.disabled = true;
-        };
-
-        // Start recording for modifying an image
-        modifyRecording.onclick = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.start();
-            modifyStatus.textContent = "Modification Status: Recording...";
-            audioChunks = [];
-
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                sendAudio(audioBlob, '/process-audio', 'modified-image', modifyStatus);
-            };
-
-            // Automatically stop recording after 5 seconds
-            setTimeout(() => {
-                mediaRecorder.stop();
-            }, 5000);
-        };
+        function modifyImage(task) {
+            const prompt = document.getElementById('modification-prompt').value || '';
+            fetch('/modify-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task, prompt })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.image_path) {
+                    document.getElementById('generated-image').src = data.image_path;
+                } else {
+                    alert(data.error || "An error occurred.");
+                }
+            });
+        }
     </script>
+</head>
+<body>
+    <h1>Interactive AI Art Show</h1>
+    <button id="record-button" onclick="startStopRecording()">Start Recording</button>
+    <p>Audio Instruction: <span id="audio-instruction"></span></p>
+    <button onclick="submitInstruction()">Generate Image</button>
+    <br><br>
+    <img id="generated-image" src="/static/images/generated_image.png" alt="Generated Image">
+    <br><br>
+    <h3>Modify Image</h3>
+    <label for="modification-prompt">Prompt for modifications:</label>
+    <input type="text" id="modification-prompt" placeholder="e.g., recolor to blue shades">
+    <button onclick="modifyImage('recolor')">Recolor</button>
+    <button onclick="modifyImage('remove_background')">Remove Background</button>
 </body>
 </html>

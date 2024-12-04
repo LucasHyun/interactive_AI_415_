@@ -4,6 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive AI Art Show</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        h1 {
+            background-color: #333;
+            color: #fff;
+            padding: 15px;
+            margin: 0;
+        }
+
+        h2, h3 {
+            color: #444;
+        }
+
+        #frame-container {
+            margin: 20px auto;
+            padding: 20px;
+            width: 70%;
+            max-width: 800px;
+            background-color: #fff;
+            border: 5px solid #c19a6b;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            position: relative;
+        }
+
+        #frame {
+            border: 10px solid #f4e7c3;
+            padding: 10px;
+            background-color: #eae0d5;
+            border-radius: 10px;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .button {
+            background-color: #333;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background-color: #555;
+        }
+
+        .input-group {
+            margin: 10px 0;
+        }
+
+        .input-group input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin: 5px;
+            width: 200px;
+        }
+
+        .art-show-container {
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+    </style>
     <script>
         let recognition;
         let isRecording = false;
@@ -90,28 +167,40 @@
 </head>
 <body>
     <h1>Interactive AI Art Show</h1>
-    <button id="record-button" onclick="startStopRecording()">Start Recording</button>
-    <p>Audio Instruction: <span id="audio-instruction"></span></p>
-    <button onclick="submitInstruction()">Generate Image</button>
-    <br><br>
-    <h2>Generated Image</h2>
-    <img id="generated-image" src="" alt="Generated Image" style="max-width: 100%; height: auto;">
-    <br><br>
-    <h2>Modify Image</h2>
-    <input type="text" id="modification-prompt" placeholder="Recolor prompt (e.g., blue shades)">
-    <button onclick="modifyImage('recolor')">Recolor</button>
-    <button onclick="modifyImage('remove_background')">Remove Background</button>
-    <br><br>
+    <div class="art-show-container">
+        <button class="button" id="record-button" onclick="startStopRecording()">Start Recording</button>
+        <p>Audio Instruction: <span id="audio-instruction"></span></p>
+        <button class="button" onclick="submitInstruction()">Generate Image</button>
+    </div>
+
+    <h2>Generated Artwork</h2>
+    <div id="frame-container">
+        <div id="frame">
+            <img id="generated-image" src="" alt="Your artwork will appear here!">
+        </div>
+    </div>
+
+    <h2>Modify Artwork</h2>
+    <div class="input-group">
+        <input type="text" id="modification-prompt" placeholder="Recolor prompt (e.g., blue shades)">
+        <button class="button" onclick="modifyImage('recolor')">Recolor</button>
+        <button class="button" onclick="modifyImage('remove_background')">Remove Background</button>
+    </div>
+
     <h3>Search and Replace</h3>
-    <input type="text" id="search-prompt" placeholder="Search prompt (e.g., dog)">
-    <input type="text" id="new-prompt" placeholder="Replace with (e.g., cat)">
-    <button onclick="modifyImage('search_and_replace')">Search and Replace</button>
-    <br><br>
+    <div class="input-group">
+        <input type="text" id="search-prompt" placeholder="Search prompt (e.g., dog)">
+        <input type="text" id="new-prompt" placeholder="Replace with (e.g., cat)">
+        <button class="button" onclick="modifyImage('search_and_replace')">Search and Replace</button>
+    </div>
+
     <h3>Outpainting</h3>
-    <label for="outpaint-left">Expand Left:</label>
-    <input type="number" id="outpaint-left" placeholder="Pixels (e.g., 200)">
-    <label for="outpaint-down">Expand Down:</label>
-    <input type="number" id="outpaint-down" placeholder="Pixels (e.g., 200)">
-    <button onclick="modifyImage('outpaint')">Outpaint</button>
+    <div class="input-group">
+        <label for="outpaint-left">Expand Left:</label>
+        <input type="number" id="outpaint-left" placeholder="Pixels (e.g., 200)">
+        <label for="outpaint-down">Expand Down:</label>
+        <input type="number" id="outpaint-down" placeholder="Pixels (e.g., 200)">
+        <button class="button" onclick="modifyImage('outpaint')">Outpaint</button>
+    </div>
 </body>
 </html>

@@ -8,7 +8,6 @@
         let recognition;
         let isRecording = false;
 
-        // Initialize Speech Recognition
         if ('webkitSpeechRecognition' in window) {
             recognition = new webkitSpeechRecognition();
             recognition.continuous = true;
@@ -22,14 +21,10 @@
                 document.getElementById('audio-instruction').innerText = transcript;
             };
 
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-            };
+            recognition.onerror = (event) => console.error('Speech recognition error:', event.error);
 
             recognition.onend = () => {
-                if (isRecording) {
-                    recognition.start(); // Restart if stopped accidentally
-                }
+                if (isRecording) recognition.start();
             };
         } else {
             alert('Speech Recognition API is not supported in this browser.');
@@ -67,10 +62,13 @@
 
         function modifyImage(task) {
             const prompt = document.getElementById('modification-prompt').value || '';
+            const searchPrompt = document.getElementById('search-prompt').value || '';
+            const newPrompt = document.getElementById('new-prompt').value || '';
+
             fetch('/modify-image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task, prompt })
+                body: JSON.stringify({ task, prompt, search_prompt: searchPrompt, new_prompt: newPrompt })
             })
             .then(response => response.json())
             .then(data => {
@@ -96,5 +94,12 @@
     <input type="text" id="modification-prompt" placeholder="e.g., recolor to blue shades">
     <button onclick="modifyImage('recolor')">Recolor</button>
     <button onclick="modifyImage('remove_background')">Remove Background</button>
+    <br><br>
+    <h3>Search and Replace</h3>
+    <label for="search-prompt">Search Prompt:</label>
+    <input type="text" id="search-prompt" placeholder="e.g., dog">
+    <label for="new-prompt">New Prompt:</label>
+    <input type="text" id="new-prompt" placeholder="e.g., golden retriever">
+    <button onclick="modifyImage('search_and_replace')">Search and Replace</button>
 </body>
 </html>

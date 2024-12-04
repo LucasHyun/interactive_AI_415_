@@ -12,13 +12,14 @@ app = Flask(__name__)
 app.config['IMAGE_FOLDER'] = './static/images'
 os.makedirs(app.config['IMAGE_FOLDER'], exist_ok=True)
 
-# API keys
+# API Keys
 STABLE_DIFFUSION_API_KEY = os.getenv("STABLE_DIFFUSION_API_KEY")
 
 # Stability AI API Endpoints
 GENERATE_IMAGE_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
 REMOVE_BACKGROUND_URL = "https://api.stability.ai/v2beta/stable-image/edit/remove-background"
 SEARCH_AND_RECOLOR_URL = "https://api.stability.ai/v2beta/stable-image/edit/search-and-recolor"
+SEARCH_AND_REPLACE_URL = "https://api.stability.ai/v2beta/stable-image/edit/search-and-replace"
 
 # Global variable to store the last generated image path
 last_generated_image = os.path.join(app.config['IMAGE_FOLDER'], "generated_image.png")
@@ -75,12 +76,38 @@ def search_and_recolor(input_image_path, prompt):
     }
     data = {
         "prompt": prompt,
+        "select_prompt": prompt,
         "output_format": "png",
     }
     response = requests.post(SEARCH_AND_RECOLOR_URL, headers=headers, files=files, data=data)
 
     if response.status_code == 200:
         modified_image_path = os.path.join(app.config['IMAGE_FOLDER'], "recolored_image.png")
+        with open(modified_image_path, 'wb') as file:
+            file.write(response.content)
+        return modified_image_path
+    else:
+        raise Exception(f"Error: {response.json()}")
+
+
+def search_and_replace(input_image_path, search_prompt, new_prompt):
+    """Replace part of the image based on search and replace prompts."""
+    headers = {
+        "authorization": f"Bearer {STABLE_DIFFUSION_API_KEY}",
+        "accept": "image/*"
+    }
+    files = {
+        "image": open(input_image_path, "rb")
+    }
+    data = {
+        "prompt": new_prompt,
+        "search_prompt": search_prompt,
+        "output_format": "png",
+    }
+    response = requests.post(SEARCH_AND_REPLACE_URL, headers=headers, files=files, data=data)
+
+    if response.status_code == 200:
+        modified_image_path = os.path.join(app.config['IMAGE_FOLDER'], "search_replaced_image.png")
         with open(modified_image_path, 'wb') as file:
             file.write(response.content)
         return modified_image_path
@@ -118,12 +145,16 @@ def modify_image():
     data = request.json
     task = data.get('task')
     prompt = data.get('prompt', '')
+    search_prompt = data.get('search_prompt', '')
+    new_prompt = data.get('new_prompt', '')
 
     try:
         if task == "remove_background":
             modified_image = remove_background(last_generated_image)
         elif task == "recolor":
             modified_image = search_and_recolor(last_generated_image, prompt)
+        elif task == "search_and_replace":
+            modified_image = search_and_replace(last_generated_image, search_prompt, new_prompt)
         else:
             return jsonify({'error': f"Unknown task: {task}"}), 400
         return jsonify({'image_path': modified_image})

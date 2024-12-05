@@ -38,7 +38,7 @@ To run this application, ensure the following:
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/your-repo/interactive-ai-art-show.git
+   git clone https://github.com/LucasHyun/interactive_AI_415_.git
    cd interactive-ai-art-show
 2. **Install Dependencies: Install all necessary Python libraries by running**:
    ```bash

@@ -40,15 +40,15 @@ To run this application, ensure the following:
    ```bash
    git clone https://github.com/your-repo/interactive-ai-art-show.git
    cd interactive-ai-art-show
-2. **Install Dependencies: Install all necessary Python libraries by running:
+2. **Install Dependencies: Install all necessary Python libraries by running**:
    ```bash
    pip install -r requirements.txt
-3. **Set Up Environment Variables: Create a .env file in the root directory and add your Stability AI API Key:
+3. **Set Up Environment Variables: Create a .env file in the root directory and add your Stability AI API Key**:
    STABLE_DIFFUSION_API_KEY=your_stable_diffusion_api_key
-4. **Run the Application:
+4. **Run the Application**:
    ```bash
    python app.py
-5. **Access the Application: Open your browser and navigate to:
+5. **Access the Application: Open your browser and navigate to**:
    ```bash
    http://127.0.0.1:5000/
    
